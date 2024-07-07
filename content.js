@@ -126,6 +126,10 @@ function showCustomPopup(field, context) {
         <h3>Enhance Field Fill</h3>
         <p>Provide additional context for: <strong>${context}</strong></p>
         <textarea id="additionalPrompt" placeholder="Enter any additional specifications or context for this field..."></textarea>
+        <div class="checkbox-container">
+            <input type="checkbox" id="useUserData" checked>
+            <label for="useUserData">Use personal data for this field</label>
+        </div>
         <div class="button-group">
             <button id="submitPrompt">Enhance & Fill</button>
             <button id="cancelPrompt">Cancel</button>
@@ -154,10 +158,12 @@ function showCustomPopup(field, context) {
     const submitButton = document.getElementById('submitPrompt');
     const cancelButton = document.getElementById('cancelPrompt');
     const textarea = document.getElementById('additionalPrompt');
+    const useUserDataCheckbox = document.getElementById('useUserData');
 
     submitButton.addEventListener('click', () => {
         const additionalPrompt = textarea.value;
-        sendToBackground(field, context, additionalPrompt);
+        const useUserData = useUserDataCheckbox.checked;
+        sendToBackground(field, context, additionalPrompt, useUserData);
         removeCustomPopup();
     });
 
@@ -184,16 +190,16 @@ function removeCustomPopup() {
     }
 }
 
-function sendToBackground(field, context, additionalPrompt = null) {
+function sendToBackground(field, context, additionalPrompt = null, useUserData = true) {
     chrome.runtime.sendMessage({
         action: 'fillField',
         fieldType: getFieldType(field),
         fieldName: field.name || field.id || '',
         context: context,
-        additionalPrompt: additionalPrompt
+        additionalPrompt: additionalPrompt,
+        useUserData: useUserData
     });
 }
-
 function getFieldType(field) {
     if (field.tagName === 'INPUT') {
         return field.type.toLowerCase();

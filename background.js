@@ -46,6 +46,21 @@ function generateFieldPrompt(fieldInfo, userData) {
     `;
 }
 
+function generateFieldPromptWithoutUserData(fieldInfo) {
+    return `
+    The form field is asking for: ${fieldInfo.context}
+    Field type: ${fieldInfo.fieldType}
+    Field name: ${fieldInfo.fieldName}
+    ${fieldInfo.additionalPrompt ? `Additional specifications: ${fieldInfo.additionalPrompt}` : ''}
+
+    Provide an appropriate generic value for this field based on the given information.
+    Do not use any specific personal data.
+    Return a JSON object with a "value" key containing the appropriate value.
+    If you can't determine a suitable value, return an empty string.
+    Example response: {"value": "Example Value"}
+    `;
+}
+
 function handleIndividualFieldFill(request, sender, sendResponse) {
     const tabId = sender.tab ? sender.tab.id : null;
     if (!tabId) {
@@ -54,8 +69,24 @@ function handleIndividualFieldFill(request, sender, sendResponse) {
         return;
     }
 
-    getUserData().then(userData => {
-        const fieldPrompt = generateFieldPrompt(request, userData);
+    if (request.useUserData) {
+        getUserData().then(userData => {
+            const fieldPrompt = generateFieldPrompt(request, userData);
+            callGroqAPI(fieldPrompt, "llama3-70b-8192")
+                .then(response => {
+                    chrome.tabs.sendMessage(tabId, {
+                        action: "fillField",
+                        value: response.value || ''
+                    });
+                    sendResponse({status: "success"});
+                })
+                .catch(error => {
+                    console.error('Error in individual field fill:', error);
+                    sendResponse({status: "error", message: error.toString()});
+                });
+        });
+    } else {
+        const fieldPrompt = generateFieldPromptWithoutUserData(request);
         callGroqAPI(fieldPrompt, "llama3-70b-8192")
             .then(response => {
                 chrome.tabs.sendMessage(tabId, {
@@ -68,7 +99,7 @@ function handleIndividualFieldFill(request, sender, sendResponse) {
                 console.error('Error in individual field fill:', error);
                 sendResponse({status: "error", message: error.toString()});
             });
-    });
+    }
 }
 
 function processBatchFill(request, tabId, sendResponse) {
