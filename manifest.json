@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Groq Form Filler Pro",
+  "version": "4.0",
+  "description": "Fill form fields using Groq API with batch and individual field filling capabilities",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["css/tailwind.min.css", "content-styles.css"],
+      "js": ["js/gsap.min.js", "content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["css/tailwind.min.css", "js/gsap.min.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groq Form Filler Pro Options</title>
+    <link href="css/tailwind.min.css" rel="stylesheet">
+    <link href="css/options.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div class="container mx-auto px-4 py-8 max-w-md">
+    <h1 class="text-3xl font-semibold mb-6 text-gray-800">Groq Form Filler Pro Options</h1>
+
+    <div id="apiKeys" class="space-y-3 mb-6"></div>
+
+    <div class="mb-4">
+        <input type="text" id="newApiKey" placeholder="Enter new Groq API key" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none input-focus transition-all">
+    </div>
+
+    <button id="addApiKey" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-all button-hover mb-4">
+        Add API Key
+    </button>
+
+    <div id="status" class="text-sm text-gray-600 mb-4 fade-in"></div>
+</div>
+
+<script src="js/gsap.min.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+.groq-custom-popup {
+    position: absolute;
+    z-index: 10000;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 10px rgba(0, 0, 0, 0.04);
+    padding: 24px;
+    width: 320px;
+    font-family: 'Inter', sans-serif;
+    animation: slideIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.groq-custom-popup h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a202c;
+    letter-spacing: -0.5px;
+}
+
+.groq-custom-popup p {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    color: #4a5568;
+    line-height: 1.5;
+}
+
+.groq-custom-popup textarea {
+    width: 100%;
+    height: 90px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: vertical;
+    margin-bottom: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.groq-custom-popup textarea:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.3);
+}
+
+.groq-custom-popup .button-group {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.groq-custom-popup button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.groq-custom-popup button#submitPrompt {
+    background-color: #4299e1;
+    color: #ffffff;
+    margin-right: 12px;
+    box-shadow: 0 4px 6px rgba(66, 153, 225, 0.12), 0 1px 3px rgba(66, 153, 225, 0.08);
+}
+
+.groq-custom-popup button#submitPrompt:hover {
+    background-color: #3182ce;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 8px rgba(66, 153, 225, 0.18), 0 2px 4px rgba(66, 153, 225, 0.12);
+}
+
+.groq-custom-popup button#cancelPrompt {
+    background-color: #edf2f7;
+    color: #4a5568;
+}
+
+.groq-custom-popup button#cancelPrompt:hover {
+    background-color: #e2e8f0;
+    color: #2d3748;
+}
+
+.groq-custom-popup button:active {
+    transform: translateY(1px);
+}
+
+/* Add a subtle gradient background */
+.groq-custom-popup::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #4299e1, #667eea);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+/* Add a pulsing effect to the submit button */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(66, 153, 225, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(66, 153, 225, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(66, 153, 225, 0); }
+}
+
+.groq-custom-popup button#submitPrompt {
+    animation: pulse 2s infinite;
+}
+
+/* Improve the field highlight effect */
+.groq-field-highlight {
+    position: relative;
+    z-index: 9999;
+}
+
+.groq-field-highlight::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 2px solid #4299e1;
+    border-radius: 6px;
+    animation: highlight-pulse 2s infinite;
+    pointer-events: none;
+}
+
+@keyframes highlight-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(66, 153, 225, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(66, 153, 225, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(66, 153, 225, 0); }
+}

@@ -1,0 +1,30 @@
+/* Styles for highlighted form fields */
+.groq-form-filler-highlight {
+    border: 2px solid #4CAF50 !important;
+    background-color: rgba(76, 175, 80, 0.1) !important;
+    transition: all 0.3s ease;
+}
+
+/* Styles for fields being filled */
+.groq-form-filler-filling {
+    background-color: rgba(255, 235, 59, 0.3) !important;
+    transition: background-color 0.5s ease;
+}
+
+/* Tooltip styles */
+.groq-form-filler-tooltip {
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.groq-form-filler-tooltip.show {
+    opacity: 1;
+}
