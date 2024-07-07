@@ -1,114 +1,3 @@
-
-document.addEventListener('DOMContentLoaded', function() {
-    const fillFormButton = document.getElementById('fillForm');
-    const userDataTextarea = document.getElementById('userData');
-    const statusDiv = document.getElementById('status');
-    const saveDataButton = document.getElementById('saveData');
-    const optionsButton = document.getElementById('options');
-
-    // Load saved user data when popup opens
-    chrome.storage.sync.get(['userData'], function(result) {
-        if (result.userData) {
-            userDataTextarea.value = JSON.stringify(result.userData, null, 2);
-        }
-    });
-
-    saveDataButton.addEventListener('click', function() {
-        let userData;
-        try {
-            userData = JSON.parse(userDataTextarea.value);
-            chrome.storage.sync.set({userData: userData}, function() {
-                showStatus('User data saved successfully!', 'text-green-500');
-            });
-        } catch (e) {
-            showStatus('Invalid JSON. Please check your input.', 'text-red-500');
-        }
-    });
-
-    fillFormButton.addEventListener('click', function() {
-        processForm();
-    });
-
-    function processForm() {
-        let userData;
-        try {
-            userData = JSON.parse(userDataTextarea.value);
-        } catch (e) {
-            showStatus('Invalid JSON. Please check your input.', 'text-red-500');
-            return;
-        }
-
-        showStatus('Processing form...', 'text-blue-500 loading');
-
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (tabs && tabs[0]) {
-                chrome.tabs.sendMessage(tabs[0].id, {action: "getFields"}, function(response) {
-                    if (chrome.runtime.lastError) {
-                        console.error(chrome.runtime.lastError);
-                        showStatus(`Error: ${chrome.runtime.lastError.message}`, 'text-red-500');
-                        return;
-                    }
-                    if (response && response.fields) {
-                        chrome.runtime.sendMessage({
-                            action: "batchFill",
-                            fields: response.fields,
-                            userData: userData
-                        }, function(response) {
-                            if (chrome.runtime.lastError) {
-                                console.error(chrome.runtime.lastError);
-                                showStatus(`Error: ${chrome.runtime.lastError.message}`, 'text-red-500');
-                            } else if (response && response.status) {
-                                showStatus(response.status === "success" ?
-                                    "Form fill completed successfully!" :
-                                    "Error in form fill", response.status === "success" ? 'text-green-500' : 'text-red-500');
-                            } else {
-                                showStatus("Unexpected error occurred", 'text-red-500');
-                            }
-                        });
-                    } else {
-                        showStatus("No form fields found", 'text-yellow-500');
-                    }
-                });
-            } else {
-                showStatus("No active tab found", 'text-yellow-500');
-            }
-        });
-    }
-
-    optionsButton.addEventListener('click', function() {
-        chrome.runtime.openOptionsPage();
-    });
-
-    function showStatus(message, className) {
-        statusDiv.textContent = message;
-        statusDiv.className = `text-sm ${className} mb-4 fade-in`;
-        gsap.fromTo(statusDiv, {opacity: 0, y: -10}, {opacity: 1, y: 0, duration: 0.5});
-        setTimeout(() => {
-            gsap.to(statusDiv, {opacity: 0, y: 10, duration: 0.5, onComplete: () => {
-                    statusDiv.textContent = '';
-                    statusDiv.className = 'text-sm text-gray-600 mb-4';
-                }});
-        }, 3000);
-    }
-
-    // Add animation to buttons
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(button => {
-        button.addEventListener('mouseenter', () => {
-            gsap.to(button, {scale: 1.05, duration: 0.2});
-        });
-        button.addEventListener('mouseleave', () => {
-            gsap.to(button, {scale: 1, duration: 0.2});
-        });
-        button.addEventListener('mousedown', () => {
-            gsap.to(button, {scale: 0.95, duration: 0.1});
-        });
-        button.addEventListener('mouseup', () => {
-            gsap.to(button, {scale: 1, duration: 0.1});
-        });
-    });
-});
-
 let selectedField = null;
 let selectedText = '';
 let customPopup = null;
@@ -131,7 +20,7 @@ document.addEventListener('mousedown', function(event) {
 
 function handleFieldSelection(event, withPrompt) {
     event.preventDefault();
-    selectedField = event.target.closest('input, textarea, select');
+    selectedField = findEditableElement(event.target);
     if (selectedField) {
         highlightField(selectedField);
         const label = findLabel(selectedField);
@@ -147,6 +36,37 @@ function handleFieldSelection(event, withPrompt) {
     }
 }
 
+function findEditableElement(element) {
+    // Check if the element itself is editable
+    if (isEditableElement(element)) {
+        return element;
+    }
+
+    // If not, check its parents
+    let parent = element.parentElement;
+    while (parent) {
+        if (isEditableElement(parent)) {
+            return parent;
+        }
+        parent = parent.parentElement;
+    }
+
+    return null;
+}
+
+function isEditableElement(element) {
+    const editableTags = ['INPUT', 'TEXTAREA', 'SELECT'];
+    const editableTypes = ['text', 'password', 'email', 'number', 'tel', 'url', 'search', 'date', 'time', 'datetime-local', 'month', 'week'];
+
+    return (
+        editableTags.includes(element.tagName) ||
+        (element.tagName === 'INPUT' && editableTypes.includes(element.type)) ||
+        element.isContentEditable ||
+        (element.getAttribute('role') === 'textbox') ||
+        (element.getAttribute('contenteditable') === 'true')
+    );
+}
+
 function highlightField(field) {
     field.classList.add('groq-field-highlight');
     setTimeout(() => {
@@ -155,11 +75,43 @@ function highlightField(field) {
 }
 
 function findLabel(field) {
-    let label = field.labels[0];
+    // First, try to find a label that's explicitly associated with the field
+    let label = field.labels && field.labels.length ? field.labels[0] : null;
+
     if (!label) {
-        label = field.closest('label') ||
-            document.querySelector(`label[for="${field.id}"]`);
+        // Look for a preceding label sibling
+        label = field.previousElementSibling;
+        if (label && label.tagName !== 'LABEL') {
+            label = null;
+        }
     }
+
+    if (!label) {
+        // Look for a parent label
+        label = field.closest('label');
+    }
+
+    if (!label && field.id) {
+        // Look for a label that references this field by id
+        label = document.querySelector(`label[for="${field.id}"]`);
+    }
+
+    // If still no label, look for nearby text that might serve as a label
+    if (!label) {
+        const parent = field.parentElement;
+        const siblings = Array.from(parent.childNodes);
+        const fieldIndex = siblings.indexOf(field);
+        for (let i = fieldIndex - 1; i >= 0; i--) {
+            const sibling = siblings[i];
+            if (sibling.nodeType === Node.TEXT_NODE && sibling.textContent.trim()) {
+                return sibling.textContent.trim();
+            }
+            if (sibling.nodeType === Node.ELEMENT_NODE && sibling.textContent.trim()) {
+                return sibling.textContent.trim();
+            }
+        }
+    }
+
     return label ? label.textContent.trim() : '';
 }
 
@@ -235,13 +187,33 @@ function removeCustomPopup() {
 function sendToBackground(field, context, additionalPrompt = null) {
     chrome.runtime.sendMessage({
         action: 'fillField',
-        fieldType: field.tagName.toLowerCase(),
-        fieldName: field.name || field.id,
+        fieldType: getFieldType(field),
+        fieldName: field.name || field.id || '',
         context: context,
         additionalPrompt: additionalPrompt
     });
 }
 
+function getFieldType(field) {
+    if (field.tagName === 'INPUT') {
+        return field.type.toLowerCase();
+    }
+    if (field.tagName === 'TEXTAREA') {
+        return 'textarea';
+    }
+    if (field.tagName === 'SELECT') {
+        return 'select';
+    }
+    if (field.isContentEditable || field.getAttribute('contenteditable') === 'true') {
+        return 'contenteditable';
+    }
+    if (field.getAttribute('role') === 'textbox') {
+        return 'textbox';
+    }
+    return 'unknown';
+}
+
+// Listen for messages from the background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("Received message in content script:", request);
     if (request.action === "getFields") {
@@ -382,89 +354,6 @@ function getHtmlContext(input) {
     return formattedContext.trim();
 }
 
-function fillFormField(fieldIndex, value) {
-    const formElements = document.querySelectorAll('form, div[role="form"]');
-    let currentIndex = 0;
-
-    formElements.forEach(form => {
-        const inputs = form.querySelectorAll('input:not([type="hidden"]), textarea, select');
-        inputs.forEach((input) => {
-            if (currentIndex === fieldIndex) {
-                if (input.type === 'checkbox' || input.type === 'radio') {
-                    input.checked = value.toLowerCase() === 'true' || value.toLowerCase() === 'checked';
-                } else if (input.tagName === 'SELECT') {
-                    const option = Array.from(input.options).find(opt => opt.text.toLowerCase() === value.toLowerCase());
-                    if (option) {
-                        option.selected = true;
-                    }
-                } else {
-                    input.value = value;
-                }
-
-                input.dispatchEvent(new Event('input', {bubbles: true}));
-                input.dispatchEvent(new Event('change', {bubbles: true}));
-
-                // Highlight the filled field
-                input.style.backgroundColor = 'yellow';
-                setTimeout(() => {
-                    input.style.backgroundColor = '';
-                }, 2000);
-            }
-            currentIndex++;
-        });
-    });
-}
-
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'fillField' && selectedField) {
-        selectedField.value = request.value;
-        selectedField.dispatchEvent(new Event('input', { bubbles: true }));
-        selectedField.dispatchEvent(new Event('change', { bubbles: true }));
-        selectedField = null;
-    } else if (request.action === "getFields") {
-        sendResponse({fields: getFormFields()});
-    } else if (request.action === "fillField") {
-        fillFormField(request.fieldIndex, request.value);
-        sendResponse({status: "success"});
-    } else if (request.action === "batchFillFields") {
-        batchFillFormFields(request.values);
-        sendResponse({status: "success"});
-    }
-    return true; // Indicates that the response is sent asynchronously
-});
-
-// Function to safely send messages to the background script
-function safelySendMessage(message) {
-    if (chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage(message, (response) => {
-            if (chrome.runtime.lastError) {
-                console.log("Failed to send message:", chrome.runtime.lastError);
-                // If the context is invalidated, stop trying to send messages
-                clearInterval(formDetectionInterval);
-            }
-        });
-    } else {
-        console.log("Chrome runtime is not available. Extension context may be invalidated.");
-        clearInterval(formDetectionInterval);
-    }
-}
-
-// Periodically check for new forms and inform the background script
-const formDetectionInterval = setInterval(() => {
-    const fields = getFormFields();
-    if (fields.length > 0) {
-        safelySendMessage({action: "formsDetected", fields: fields});
-    }
-}, 5000);  // Check every 5 seconds
-
-// Inform the background script that the content script has loaded
-chrome.runtime.sendMessage({action: "contentScriptLoaded"}, (response) => {
-    if (chrome.runtime.lastError) {
-        console.log("Failed to send contentScriptLoaded message:", chrome.runtime.lastError);
-    }
-});
-
 function batchFillFormFields(values) {
     const formElements = document.querySelectorAll('form, div[role="form"]');
     let currentIndex = 0;
@@ -483,27 +372,14 @@ function batchFillFormFields(values) {
 
 function fillField(field, value) {
     console.log(`Filling field:`, field, `with value:`, value);
-    if (field.type === 'checkbox' || field.type === 'radio') {
-        field.checked = value.toLowerCase() === 'true' || value.toLowerCase() === 'checked';
-    } else if (field.tagName === 'SELECT') {
-        const option = Array.from(field.options).find(opt =>
-            opt.text.toLowerCase() === value.toLowerCase() ||
-            opt.value.toLowerCase() === value.toLowerCase()
-        );
-        if (option) {
-            option.selected = true;
-        } else {
-            console.warn(`Could not find matching option for select field. Value: ${value}`);
-        }
-    } else {
-        field.value = value;
-    }
+    const fieldType = getFieldType(field);
 
-    function fillField(field, value) {
-        console.log(`Filling field:`, field, `with value:`, value);
-        if (field.type === 'checkbox' || field.type === 'radio') {
+    switch (fieldType) {
+        case 'checkbox':
+        case 'radio':
             field.checked = value.toLowerCase() === 'true' || value.toLowerCase() === 'checked';
-        } else if (field.tagName === 'SELECT') {
+            break;
+        case 'select':
             const option = Array.from(field.options).find(opt =>
                 opt.text.toLowerCase() === value.toLowerCase() ||
                 opt.value.toLowerCase() === value.toLowerCase()
@@ -513,20 +389,13 @@ function fillField(field, value) {
             } else {
                 console.warn(`Could not find matching option for select field. Value: ${value}`);
             }
-        } else {
+            break;
+        case 'contenteditable':
+        case 'textbox':
+            field.textContent = value;
+            break;
+        default:
             field.value = value;
-        }
-
-        // Trigger events
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        field.dispatchEvent(new Event('change', { bubbles: true }));
-
-        // Highlight the filled field
-        const originalBackground = field.style.backgroundColor;
-        field.style.backgroundColor = 'yellow';
-        setTimeout(() => {
-            field.style.backgroundColor = originalBackground;
-        }, 2000);
     }
 
     // Trigger events
@@ -534,11 +403,7 @@ function fillField(field, value) {
     field.dispatchEvent(new Event('change', { bubbles: true }));
 
     // Highlight the filled field
-    const originalBackground = field.style.backgroundColor;
-    field.style.backgroundColor = 'yellow';
-    setTimeout(() => {
-        field.style.backgroundColor = originalBackground;
-    }, 2000);
+    highlightField(field);
 }
 
 console.log("Content script loaded");

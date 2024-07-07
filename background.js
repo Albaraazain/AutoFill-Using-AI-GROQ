@@ -46,7 +46,6 @@ function generateFieldPrompt(fieldInfo, userData) {
     `;
 }
 
-
 function handleIndividualFieldFill(request, sender, sendResponse) {
     const tabId = sender.tab ? sender.tab.id : null;
     if (!tabId) {
@@ -71,7 +70,6 @@ function handleIndividualFieldFill(request, sender, sendResponse) {
             });
     });
 }
-
 
 function processBatchFill(request, tabId, sendResponse) {
     batchProcessFormFields(request.fields, request.userData, tabId)
